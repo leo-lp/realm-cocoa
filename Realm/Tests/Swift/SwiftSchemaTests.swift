@@ -21,11 +21,11 @@ import Realm
 import Realm.Private
 
 class InitLinkedToClass: RLMObject {
-    dynamic var value = SwiftIntObject(value: [0])
+    @objc dynamic var value = SwiftIntObject(value: [0])
 }
 
 class IgnoredLinkPropertyObject : RLMObject {
-    dynamic var value = 0
+    @objc dynamic var value = 0
     var obj = SwiftIntObject()
 
     override class func ignoredProperties() -> [String] {
@@ -34,7 +34,7 @@ class IgnoredLinkPropertyObject : RLMObject {
 }
 
 class SwiftRecursingSchemaTestObject : RLMObject {
-    dynamic var propertyWithIllegalDefaultValue: SwiftIntObject? = {
+    @objc dynamic var propertyWithIllegalDefaultValue: SwiftIntObject? = {
         if mayAccessSchema {
             let realm = RLMRealm.default()
             return SwiftIntObject.allObjects().firstObject() as! SwiftIntObject?
@@ -47,7 +47,7 @@ class SwiftRecursingSchemaTestObject : RLMObject {
 }
 
 class InitAppendsToArrayProperty : RLMObject {
-    dynamic var propertyWithIllegalDefaultValue: RLMArray = {
+    @objc dynamic var propertyWithIllegalDefaultValue: RLMArray = {
         if mayAppend {
             let array = RLMArray(objectClassName: SwiftIntObject.className())
             array.add(SwiftIntObject())
@@ -90,7 +90,7 @@ class SwiftSchemaTests: RLMMultiProcessTestCase {
 
         // Should not throw (or crash) despite creating an object with an
         // unintialized schema during schema init
-        let _ = InitLinkedToClass()
+        _ = InitLinkedToClass()
     }
 
     func testCreateUnmanagedObjectWithLinkPropertyWithoutSharedSchemaInitialized() {
@@ -101,7 +101,7 @@ class SwiftSchemaTests: RLMMultiProcessTestCase {
 
         // This is different from the above test in that it links to an
         // unintialized type rather than creating one
-        let _ = SwiftCompanyObject()
+        _ = SwiftCompanyObject()
     }
 
     func testCreateUnmanagedObjectWhichCreatesAnotherClassViaInitWithValueDuringSchemaInit() {
@@ -110,8 +110,8 @@ class SwiftSchemaTests: RLMMultiProcessTestCase {
             return
         }
 
-        let _ = InitLinkedToClass(value: [[0]])
-        let _ = SwiftCompanyObject(value: [[["Jaden", 20, false]]])
+        _ = InitLinkedToClass(value: [[0]])
+        _ = SwiftCompanyObject(value: [[["Jaden", 20, false]]])
     }
 
     func testInitUnmanagedObjectNotInClassSubsetDuringSchemaInit() {
@@ -123,7 +123,7 @@ class SwiftSchemaTests: RLMMultiProcessTestCase {
         let config = RLMRealmConfiguration.default()
         config.objectClasses = [IgnoredLinkPropertyObject.self]
         config.inMemoryIdentifier = #function
-        let _ = try! RLMRealm(configuration: config)
+        _ = try! RLMRealm(configuration: config)
         let r = try! RLMRealm(configuration: RLMRealmConfiguration.default())
         try! r.transaction {
             _ = IgnoredLinkPropertyObject.create(in: r, withValue: [1])

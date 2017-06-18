@@ -43,7 +43,7 @@ private func dynamicRealm(_ fileURL: URL) -> RLMRealm {
 
 class MigrationTests: TestCase {
 
-    // MARK Utility methods
+    // MARK: Utility methods
 
     // create realm at path and test version is 0
     private func createAndTestRealmAtURL(_ fileURL: URL) {
@@ -85,14 +85,14 @@ class MigrationTests: TestCase {
         Realm.Configuration.defaultConfiguration = config
     }
 
-    // MARK Test cases
+    // MARK: Test cases
 
     func testSetDefaultRealmSchemaVersion() {
         createAndTestRealmAtURL(defaultRealmURL())
 
         var didRun = false
         let config = Realm.Configuration(fileURL: defaultRealmURL(), schemaVersion: 1,
-                                         migrationBlock: { _ in didRun = true })
+                                         migrationBlock: { _, _ in didRun = true })
         Realm.Configuration.defaultConfiguration = config
 
         try! Realm.performMigration()
@@ -158,11 +158,11 @@ class MigrationTests: TestCase {
         }
 
         migrateAndTestDefaultRealm { migration, _ in
-            migration.enumerateObjects(ofType: "SwiftStringObject", { _ in
+            migration.enumerateObjects(ofType: "SwiftStringObject", { _, _ in
                 XCTFail("No objects to enumerate")
             })
 
-            migration.enumerateObjects(ofType: "NoSuchClass", { _ in }) // shouldn't throw
+            migration.enumerateObjects(ofType: "NoSuchClass", { _, _ in }) // shouldn't throw
         }
 
         autoreleasepool {
@@ -249,6 +249,115 @@ class MigrationTests: TestCase {
                 XCTAssertTrue(newObject!["optDoubleCol"]! is Double)
                 XCTAssertTrue(oldObject!["optBoolCol"]! is Bool)
                 XCTAssertTrue(newObject!["optBoolCol"]! is Bool)
+            }
+        }
+    }
+
+    func testEnumerateObjectsAfterDeleteObjects() {
+        autoreleasepool {
+            // add object
+            try! Realm().write {
+                try! Realm().create(SwiftStringObject.self, value: ["1"])
+                try! Realm().create(SwiftStringObject.self, value: ["2"])
+                try! Realm().create(SwiftStringObject.self, value: ["3"])
+                try! Realm().create(SwiftIntObject.self, value: [1])
+                try! Realm().create(SwiftIntObject.self, value: [2])
+                try! Realm().create(SwiftIntObject.self, value: [3])
+                try! Realm().create(SwiftBoolObject.self, value: [true])
+                try! Realm().create(SwiftBoolObject.self, value: [false])
+                try! Realm().create(SwiftBoolObject.self, value: [true])
+            }
+        }
+
+        migrateAndTestDefaultRealm(1) { migration, _ in
+            var count = 0
+            migration.enumerateObjects(ofType: "SwiftStringObject") { oldObj, newObj in
+                XCTAssertEqual(newObj!["stringCol"] as! String, oldObj!["stringCol"] as! String)
+                if oldObj!["stringCol"] as! String == "2" {
+                    migration.delete(newObj!)
+                }
+            }
+            migration.enumerateObjects(ofType: "SwiftStringObject") { oldObj, newObj in
+                XCTAssertEqual(newObj!["stringCol"] as! String, oldObj!["stringCol"] as! String)
+                count += 1
+            }
+            XCTAssertEqual(count, 2)
+
+            count = 0
+            migration.enumerateObjects(ofType: "SwiftIntObject") { oldObj, newObj in
+                XCTAssertEqual(newObj!["intCol"] as! Int, oldObj!["intCol"] as! Int)
+                if oldObj!["intCol"] as! Int == 1 {
+                    migration.delete(newObj!)
+                }
+            }
+            migration.enumerateObjects(ofType: "SwiftIntObject") { oldObj, newObj in
+                XCTAssertEqual(newObj!["intCol"] as! Int, oldObj!["intCol"] as! Int)
+                count += 1
+            }
+            XCTAssertEqual(count, 2)
+
+            migration.enumerateObjects(ofType: "SwiftBoolObject") { oldObj, newObj in
+                XCTAssertEqual(newObj!["boolCol"] as! Bool, oldObj!["boolCol"] as! Bool)
+                migration.delete(newObj!)
+            }
+            migration.enumerateObjects(ofType: "SwiftBoolObject") { _, _ in
+                XCTFail("This line should not executed since all objects have been deleted.")
+            }
+        }
+    }
+
+    func testEnumerateObjectsAfterDeleteInsertObjects() {
+        autoreleasepool {
+            // add object
+            try! Realm().write {
+                try! Realm().create(SwiftStringObject.self, value: ["1"])
+                try! Realm().create(SwiftStringObject.self, value: ["2"])
+                try! Realm().create(SwiftStringObject.self, value: ["3"])
+                try! Realm().create(SwiftIntObject.self, value: [1])
+                try! Realm().create(SwiftIntObject.self, value: [2])
+                try! Realm().create(SwiftIntObject.self, value: [3])
+                try! Realm().create(SwiftBoolObject.self, value: [true])
+                try! Realm().create(SwiftBoolObject.self, value: [false])
+                try! Realm().create(SwiftBoolObject.self, value: [true])
+            }
+        }
+
+        migrateAndTestDefaultRealm(1) { migration, _ in
+            var count = 0
+            migration.enumerateObjects(ofType: "SwiftStringObject") { oldObj, newObj in
+                XCTAssertEqual(newObj!["stringCol"] as! String, oldObj!["stringCol"] as! String)
+                if oldObj!["stringCol"] as! String == "2" {
+                    migration.delete(newObj!)
+                    migration.create("SwiftStringObject", value: ["A"])
+                }
+            }
+            migration.enumerateObjects(ofType: "SwiftStringObject") { oldObj, newObj in
+                XCTAssertEqual(newObj!["stringCol"] as! String, oldObj!["stringCol"] as! String)
+                count += 1
+            }
+            XCTAssertEqual(count, 2)
+
+            count = 0
+            migration.enumerateObjects(ofType: "SwiftIntObject") { oldObj, newObj in
+                XCTAssertEqual(newObj!["intCol"] as! Int, oldObj!["intCol"] as! Int)
+                if oldObj!["intCol"] as! Int == 1 {
+                    migration.delete(newObj!)
+                    migration.create("SwiftIntObject", value: [0])
+                }
+            }
+            migration.enumerateObjects(ofType: "SwiftIntObject") { oldObj, newObj in
+                XCTAssertEqual(newObj!["intCol"] as! Int, oldObj!["intCol"] as! Int)
+                count += 1
+            }
+            XCTAssertEqual(count, 2)
+
+            migration.enumerateObjects(ofType: "SwiftBoolObject") { oldObj, newObj in
+                XCTAssertEqual(newObj!["boolCol"] as! Bool, oldObj!["boolCol"] as! Bool)
+                migration.delete(newObj!)
+                migration.create("SwiftBoolObject", value: [false])
+            }
+            migration.enumerateObjects(ofType: "SwiftBoolObject") { _, _ in
+                XCTFail("This line should not executed since all objects have been deleted.")
             }
         }
     }
@@ -468,7 +577,7 @@ class MigrationTests: TestCase {
         }
 
         var config = Realm.Configuration(fileURL: defaultRealmURL(), objectTypes: [SwiftEmployeeObject.self])
-        config.migrationBlock = { _ in
+        config.migrationBlock = { _, _ in
             XCTFail("Migration block should not be called")
         }
         config.deleteRealmIfMigrationNeeded = true
@@ -502,7 +611,7 @@ class MigrationTests: TestCase {
             }
         }
 
-        let migrationBlock: MigrationBlock = { _ in
+        let migrationBlock: MigrationBlock = { _, _ in
             XCTFail("Migration block should not be called")
         }
         let config = Realm.Configuration(fileURL: defaultRealmURL(),
@@ -513,6 +622,6 @@ class MigrationTests: TestCase {
             _ = try Realm(configuration: config)
         }
 
-        class_replaceMethod(metaClass, #selector(RLMObjectBase.sharedSchema), originalImp, "@@:")
+        class_replaceMethod(metaClass, #selector(RLMObjectBase.sharedSchema), originalImp!, "@@:")
     }
 }

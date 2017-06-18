@@ -35,9 +35,12 @@ Pod::Spec.new do |s|
                               'include/**/RLMSyncConfiguration.h',
                               'include/**/RLMSyncCredentials.h',
                               'include/**/RLMSyncManager.h',
+                              'include/**/RLMSyncPermission.h',
                               'include/**/RLMSyncPermissionChange.h',
                               'include/**/RLMSyncPermissionOffer.h',
                               'include/**/RLMSyncPermissionOfferResponse.h',
+                              'include/**/RLMSyncPermissionResults.h',
+                              'include/**/RLMSyncPermissionValue.h',
                               'include/**/RLMSyncSession.h',
                               'include/**/RLMSyncUser.h',
                               'include/**/RLMSyncUtil.h',
@@ -60,6 +63,7 @@ Pod::Spec.new do |s|
                               'Realm/ObjectStore/src/*.cpp',
                               'Realm/ObjectStore/src/sync/*.cpp',
                               'Realm/ObjectStore/src/sync/impl/*.cpp',
+                              'Realm/ObjectStore/src/sync/impl/apple/*.cpp',
                               'Realm/ObjectStore/src/impl/*.cpp',
                               'Realm/ObjectStore/src/impl/apple/*.cpp',
                               'Realm/ObjectStore/src/util/*.cpp',
@@ -73,21 +77,21 @@ Pod::Spec.new do |s|
   s.header_mappings_dir     = 'include'
   s.pod_target_xcconfig     = { 'APPLICATION_EXTENSION_API_ONLY' => 'YES',
                                 'CLANG_CXX_LANGUAGE_STANDARD' => 'c++14',
-                                'HEADER_SEARCH_PATHS' => '"${PODS_ROOT}/Realm/include/core"',
+                                'OTHER_CPLUSPLUSFLAGS' => '-isystem "${PODS_ROOT}/Realm/include/core"',
                                 'USER_HEADER_SEARCH_PATHS' => '"${PODS_ROOT}/Realm/include" "${PODS_ROOT}/Realm/include/Realm"' }
   s.preserve_paths          = %w(build.sh include)
 
   s.ios.deployment_target   = '7.0'
-  s.ios.vendored_library    = 'core/librealm-ios.a'
+  s.ios.vendored_library    = 'core/librealmcore-ios.a'
 
   s.osx.deployment_target   = '10.9'
-  s.osx.vendored_library    = 'core/librealm-macosx.a'
+  s.osx.vendored_library    = 'core/librealmcore-macosx.a'
 
   s.watchos.deployment_target = '2.0'
-  s.watchos.vendored_library  = 'core/librealm-watchos.a'
+  s.watchos.vendored_library  = 'core/librealmcore-watchos.a'
 
   s.tvos.deployment_target = '9.0'
-  s.tvos.vendored_library  = 'core/librealm-tvos.a'
+  s.tvos.vendored_library  = 'core/librealmcore-tvos.a'
 
   s.subspec 'Headers' do |s|
     s.source_files          = public_header_files

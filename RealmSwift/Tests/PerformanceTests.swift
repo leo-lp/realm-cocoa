@@ -37,6 +37,16 @@ private var largeRealm: Realm!
 private let isRunningOnDevice = TARGET_IPHONE_SIMULATOR == 0
 
 class SwiftPerformanceTests: TestCase {
+#if swift(>=4)
+    override class var defaultTestSuite: XCTestSuite {
+        #if !DEBUG && os(iOS)
+            if isRunningOnDevice {
+                return super.defaultTestSuite
+            }
+        #endif
+        return XCTestSuite(name: "SwiftPerformanceTests")
+    }
+#else
     override class func defaultTestSuite() -> XCTestSuite {
 #if !DEBUG && os(iOS)
         if isRunningOnDevice {
@@ -45,6 +55,7 @@ class SwiftPerformanceTests: TestCase {
 #endif
         return XCTestSuite(name: "SwiftPerformanceTests")
     }
+#endif
 
     override class func setUp() {
         super.setUp()
@@ -66,6 +77,30 @@ class SwiftPerformanceTests: TestCase {
         // Do nothing, as we need to keep our in-memory realms around between tests
     }
 
+#if swift(>=4)
+    override func measure(_ block: (() -> Void)) {
+        super.measure {
+            autoreleasepool {
+                block()
+            }
+        }
+    }
+
+    override func measureMetrics(_ metrics: [XCTPerformanceMetric], automaticallyStartMeasuring: Bool, for block: () -> Void) {
+        super.measureMetrics(metrics, automaticallyStartMeasuring: automaticallyStartMeasuring) {
+            autoreleasepool {
+                block()
+            }
+        }
+    }
+
+    func inMeasureBlock(block: () -> Void) {
+        measureMetrics(type(of: self).defaultPerformanceMetrics, automaticallyStartMeasuring: false) {
+            _ = block()
+        }
+    }
+
+#else
     override func measure(_ block: @escaping (() -> Void)) {
         super.measure {
             autoreleasepool {
@@ -87,6 +122,7 @@ class SwiftPerformanceTests: TestCase {
             _ = block()
         }
     }
+#endif
 
     private func copyRealmToTestPath(_ realm: Realm) -> Realm {
         do {
@@ -479,6 +515,92 @@ class SwiftPerformanceTests: TestCase {
             queue.sync {}
             self.stopMeasuring()
             token.stop()
+        }
+    }
+
+    func testValueForKeyForListObjects() {
+        let realm = try! Realm()
+        try! realm.write {
+            for value in 0..<10000 {
+                let listObject = SwiftListOfSwiftObject()
+                let object = SwiftObject()
+                object.intCol = value
+                object.stringCol = String(value)
+                listObject.array.append(object)
+                realm.add(listObject)
+            }
+        }
+        let objects = realm.objects(SwiftListOfSwiftObject.self)
+        measure {
+            _ = objects.value(forKeyPath: "array") as! [List<SwiftListOfSwiftObject>]
+        }
+    }
+
+    func testValueForKeyForIntObjects() {
+        let realm = try! Realm()
+        try! realm.write {
+            for value in 0..<10000 {
+                autoreleasepool {
+                    let object = SwiftObject()
+                    object.intCol = value
+                    realm.add(object)
+                }
+            }
+        }
+        let objects = realm.objects(SwiftObject.self)
+        measure {
+            _ = objects.value(forKeyPath: "intCol") as! [Int]
+        }
+    }
+
+    func testValueForKeyForStringObjects() {
+        let realm = try! Realm()
+        try! realm.write {
+            for value in 0..<10000 {
+                autoreleasepool {
+                    let object = SwiftObject()
+                    object.stringCol = String(value)
+                    realm.add(object)
+                }
+            }
+        }
+        let objects = realm.objects(SwiftObject.self)
+        measure {
+            _ = objects.value(forKeyPath: "stringCol") as! [String]
+        }
+    }
+
+    func testValueForKeyForOptionalIntObjects() {
+        let realm = try! Realm()
+        try! realm.write {
+            for value in 0..<10000 {
+                autoreleasepool {
+                    let object = SwiftOptionalObject()
+                    object.optIntCol.value = value
+                    realm.add(object)
+                }
+            }
+        }
+        let objects = realm.objects(SwiftOptionalObject.self)
+        measure {
+            _ = objects.value(forKeyPath: "optIntCol") as! [Int]
+        }
+    }
+
+    func testValueForKeyForOptionalStringObjects() {
+        let realm = try! Realm()
+        try! realm.write {
+            for value in 0..<10000 {
+                autoreleasepool {
+                    let object = SwiftOptionalObject()
+                    object.optStringCol = String(value)
+                    realm.add(object)
+                }
+            }
+        }
+        let objects = realm.objects(SwiftOptionalObject.self)
+        measure {
+            _ = objects.value(forKeyPath: "optStringCol") as! [String]
         }
     }
 }

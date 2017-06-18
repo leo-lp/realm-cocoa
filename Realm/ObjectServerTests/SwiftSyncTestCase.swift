@@ -20,11 +20,11 @@ import XCTest
 import RealmSwift
 
 class SwiftSyncObject: Object {
-    dynamic var stringProp: String = ""
+    @objc dynamic var stringProp: String = ""
 }
 
 class SwiftHugeSyncObject: Object {
-    dynamic var dataProp: NSData?
+    @objc dynamic var dataProp: NSData?
 
     required init() {
         super.init()
@@ -50,6 +50,12 @@ class SwiftSyncTestCase: RLMSyncTestCase {
 
     let authURL: URL = URL(string: "http://127.0.0.1:9080")!
     let realmURL: URL = URL(string: "realm://localhost:9080/~/testBasicSync")!
+
+    /// For testing, make a unique Realm URL of the form "realm://localhost:9080/~/X",
+    /// where X is either a custom string passed as an argument, or an UUID string.
+    static func uniqueRealmURL(customName: String? = nil) -> URL {
+        return URL(string: "realm://localhost:9080/~/\(customName ?? UUID().uuidString)")!
+    }
 
     func executeChild(file: StaticString = #file, line: UInt = #line) {
         XCTAssert(0 == runChildAndWait(), "Tests in child process failed", file: file, line: line)

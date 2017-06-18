@@ -26,12 +26,12 @@ private func nextDynamicDefaultSeed() -> Int {
     return dynamicDefaultSeed
 }
 class DynamicDefaultObject: Object {
-    dynamic var intCol = nextDynamicDefaultSeed()
-    dynamic var floatCol = Float(nextDynamicDefaultSeed())
-    dynamic var doubleCol = Double(nextDynamicDefaultSeed())
-    dynamic var dateCol = Date(timeIntervalSinceReferenceDate: TimeInterval(nextDynamicDefaultSeed()))
-    dynamic var stringCol = UUID().uuidString
-    dynamic var binaryCol = UUID().uuidString.data(using: .utf8)
+    @objc dynamic var intCol = nextDynamicDefaultSeed()
+    @objc dynamic var floatCol = Float(nextDynamicDefaultSeed())
+    @objc dynamic var doubleCol = Double(nextDynamicDefaultSeed())
+    @objc dynamic var dateCol = Date(timeIntervalSinceReferenceDate: TimeInterval(nextDynamicDefaultSeed()))
+    @objc dynamic var stringCol = UUID().uuidString
+    @objc dynamic var binaryCol = UUID().uuidString.data(using: .utf8)
 
     override static func primaryKey() -> String? {
         return "intCol"
@@ -222,7 +222,8 @@ class ObjectTests: TestCase {
         assertDifferentPropertyValues(DynamicDefaultObject(), DynamicDefaultObject())
         let realm = try! Realm()
         try! realm.write {
-            assertDifferentPropertyValues(realm.create(DynamicDefaultObject.self), realm.create(DynamicDefaultObject.self))
+            assertDifferentPropertyValues(realm.create(DynamicDefaultObject.self),
+                                          realm.create(DynamicDefaultObject.self))
         }
     }
 
@@ -309,6 +310,13 @@ class ObjectTests: TestCase {
         setter(object, [boolObject], "arrayCol")
         XCTAssertEqual((getter(object, "arrayCol") as! List<SwiftBoolObject>).count, 1)
         XCTAssertEqual((getter(object, "arrayCol") as! List<SwiftBoolObject>).first!, boolObject)
+
+        setter(object, nil, "arrayCol")
+        XCTAssertEqual((getter(object, "arrayCol") as! List<SwiftBoolObject>).count, 0)
+
+        setter(object, [boolObject], "arrayCol")
+        setter(object, NSNull(), "arrayCol")
+        XCTAssertEqual((getter(object, "arrayCol") as! List<SwiftBoolObject>).count, 0)
     }
 
     func dynamicSetAndTestAllTypes(_ setter: (DynamicObject, Any?, String) -> Void,
@@ -352,6 +360,9 @@ class ObjectTests: TestCase {
         setter(object, [boolObject], "arrayCol")
         XCTAssertEqual((getter(object, "arrayCol") as! List<DynamicObject>).count, 1)
         XCTAssertEqual((getter(object, "arrayCol") as! List<DynamicObject>).first!, boolObject)
+
+        setter(object, nil, "arrayCol")
+        XCTAssertEqual((getter(object, "arrayCol") as! List<DynamicObject>).count, 0)
     }
 
     // Yields a read-write migration `SwiftObject` to the given block
